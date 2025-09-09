@@ -1,0 +1,70 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Output of the go build command
+*.out
+
+# Build artifacts
+/bin/
+/build/
+/dist/
+*.test
+
+# Go workspace file (Go 1.18+)
+go.work
+go.work.sum
+
+# Dependency directories (vendor/)
+vendor/
+
+# IDE/editor directories and files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+*.bak
+*.tmp
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Test cache
+*.cover
+*.coverprofile
+*.test
+
+# Go module files (leave go.mod and go.sum tracked)
+# (Do not ignore go.mod and go.sum unless you have a special case)
+# go.mod
+# go.sum
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.*
+
+# Coverage reports
+coverage.out
+coverage.html
+
+# Profiling data
+pprof/
+*.pprof
+cpu.prof
+mem.prof
+block.prof
+mutex.prof
+trace.out
+
+# Temporary files
+*.tmp
+*.temp
