@@ -1,0 +1,23 @@
+app_name: debank_api
+server:
+  host: 0.0.0.0
+  port: 8080
+
+log:
+  level: INFO
+  log_path: logs/app.log
+  max_size: 10
+  max_backups: 5
+  max_age: 30
+
+postgres_db:
+  max_open_conn: 10
+  max_idle_conn: 2
+  conn_max_life_in_min: 20
+  conn_max_idle_in_min: 10
+  enable_sql_log: true
+  enable_migration: true
+
+third_party:
+  debank:
+    base_url: https://pro-openapi.debank.com

@@ -1,0 +1,8 @@
+log:
+  level: WARN
+
+timescale_db:
+  max_open_conn: 50
+  max_idle_conn: 30
+  conn_max_life_in_min: 20
+  conn_max_idle_in_min: 10

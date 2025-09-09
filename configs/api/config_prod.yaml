@@ -1,0 +1,8 @@
+log:
+  level: WARN
+
+postgres_db:
+  max_open_conn: 10
+  max_idle_conn: 2
+  conn_max_life_in_min: 20
+  conn_max_idle_in_min: 10
