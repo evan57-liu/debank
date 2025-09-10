@@ -68,7 +68,6 @@ type PoolDto struct {
 	ProjectID  string `json:"project_id"`
 	AdapterID  string `json:"adapter_id"`
 	Controller string `json:"controller"`
-	Index      *int   `json:"index"`
 	TimeAt     int64  `json:"time_at"`
 }
 

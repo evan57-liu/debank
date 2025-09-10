@@ -29,7 +29,7 @@ func (s *Scheduler) RegisterJobs() {
 	/*if _, err := s.cron.AddJob("0 0 0 * * 1", s.protocolJob); err != nil {
 		log.Fatal("Failed to schedule symbol job:", err)
 	}*/
-	if _, err := s.cron.AddJob("0 */5 * * * *", s.protocolJob); err != nil {
+	if _, err := s.cron.AddJob("0 30 0 * * ?", s.protocolJob); err != nil {
 		log.Fatal("Failed to schedule symbol job:", err)
 	}
 
