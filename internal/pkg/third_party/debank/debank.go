@@ -20,6 +20,8 @@ const (
 	getUserTokenList = "/v1/user/token_list"
 	// See: https://docs.cloud.debank.com/en/readme/api-pro-reference/user#get-user-used-chain
 	getUserChainList = "/v1/user/used_chain_list"
+	// See:https://docs.cloud.debank.com/en/readme/api-pro-reference/user#get-user-total-balance-on-all-supported-chains
+	getUserTotalBalance = "/v1/user/total_balance"
 )
 
 type Client struct {
@@ -80,6 +82,24 @@ func (c *Client) GetUserChainList(ctx context.Context, walletAddress string) ([]
 	}
 
 	return resp, nil
+}
+
+func (c *Client) GetUserTotalBalance(ctx context.Context, walletAddress string) (*dto.UserTotalBalanceDto, error) {
+	params := map[string]string{
+		"id": walletAddress,
+	}
+	body, err := get(ctx, c.httpClient, getUserTotalBalance, params)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := new(dto.UserTotalBalanceDto)
+	if err := json.Unmarshal(body, resp); err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+
 }
 
 func get(ctx context.Context, client *httpclient.Client, endpoint string, params map[string]string) ([]byte, error) {

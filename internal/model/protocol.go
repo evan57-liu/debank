@@ -65,7 +65,9 @@ type ProtocolPool struct {
 	ChainID    string `json:"chain_id"`
 	ProtocolID string `json:"protocol_id"`
 	PoolID     string `json:"pool_id"`
+	Status     int    `json:"status"`
 }
+
 type UserToken struct {
 	ID             int64            `gorm:"primaryKey;autoIncrement"`
 	Address        string           `gorm:"size:128;index;not null"`
@@ -96,4 +98,18 @@ type WalletAddress struct {
 
 func (s *WalletAddress) TableName() string {
 	return constant.TableNameWalletAddress
+}
+
+type WalletAssetSnapshot struct {
+	ID            int64     `gorm:"primaryKey;autoIncrement"`
+	WalletAddress string    `gorm:"size:128;index"`
+	SyncTime      time.Time `gorm:"not null"`
+
+	TotalUSDValue decimal.Decimal `gorm:"type:decimal(40,30);index;not null;default:'0''"`
+
+	CreatedAt time.Time
+}
+
+func (s *WalletAssetSnapshot) TableName() string {
+	return constant.TableNameWalletAssetSnapshot
 }

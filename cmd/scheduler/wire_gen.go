@@ -35,8 +35,9 @@ func initScheduler() (*scheduler.Scheduler, func(), error) {
 	protocolPositionRepository := repo.NewProtocolPositionRepository(postgresDB)
 	userTokenRepository := repo.NewUserTokenRepository(postgresDB)
 	walletAddressRepository := repo.NewWalletAddressRepository(postgresDB)
+	walletAssetSnapshotRepository := repo.NewWalletAssetSnapshotRepository(postgresDB)
 	client := debank.NewClient()
-	protocolService := service.NewProtocolService(protocolMappingRepository, protocolPositionRepository, userTokenRepository, walletAddressRepository, client, postgresDB)
+	protocolService := service.NewProtocolService(protocolMappingRepository, protocolPositionRepository, userTokenRepository, walletAddressRepository, walletAssetSnapshotRepository, client, postgresDB)
 	protocolJob := jobs.NewProtocolJob(protocolService)
 	schedulerScheduler := scheduler.NewScheduler(protocolJob)
 	return schedulerScheduler, func() {

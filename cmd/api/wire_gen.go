@@ -35,8 +35,9 @@ func initApp() (*gin.Engine, func(), error) {
 	protocolPositionRepository := repo.NewProtocolPositionRepository(postgresDB)
 	userTokenRepository := repo.NewUserTokenRepository(postgresDB)
 	walletAddressRepository := repo.NewWalletAddressRepository(postgresDB)
+	walletAssetSnapshotRepository := repo.NewWalletAssetSnapshotRepository(postgresDB)
 	client := debank.NewClient()
-	protocolService := service.NewProtocolService(protocolMappingRepository, protocolPositionRepository, userTokenRepository, walletAddressRepository, client, postgresDB)
+	protocolService := service.NewProtocolService(protocolMappingRepository, protocolPositionRepository, userTokenRepository, walletAddressRepository, walletAssetSnapshotRepository, client, postgresDB)
 	protocolHandler := handler.NewProtocolHandler(protocolService)
 	engine := internal.RegisterRoutes(healthHandler, protocolHandler)
 	return engine, func() {

@@ -45,7 +45,7 @@ func NewPostgresDB() (*PostgresDB, error) {
 	sqlDB.SetConnMaxIdleTime(time.Duration(dbConfig.ConnMaxIdleInMin) * time.Minute) // 限制空闲连接存活时间
 
 	if dbConfig.EnableMigration {
-		if err := db.AutoMigrate(&model.ProtocolMapping{}, &model.ProtocolPosition{}, &model.UserToken{}, &model.WalletAddress{}); err != nil {
+		if err := db.AutoMigrate(&model.ProtocolMapping{}, &model.ProtocolPosition{}, &model.UserToken{}, &model.WalletAddress{}, &model.WalletAssetSnapshot{}); err != nil {
 			return nil, err
 		}
 	}

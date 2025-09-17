@@ -7,4 +7,5 @@ var ProviderSet = wire.NewSet(
 	NewProtocolPositionRepository,
 	NewUserTokenRepository,
 	NewWalletAddressRepository,
+	NewWalletAssetSnapshotRepository,
 )

@@ -53,6 +53,7 @@ type TokenDto struct {
 	TimeAt          float64 `json:"time_at"`
 	LowCreditScore  bool    `json:"low_credit_score"`
 	Amount          float64 `json:"amount"`
+	Type            string  `json:"type,omitempty"` // 例如 "balance", "reward"
 }
 
 type PortfolioDetailDto struct {
@@ -92,12 +93,14 @@ type UserTokenDto struct {
 	Amount          decimal.Decimal  `json:"amount"`
 }
 type UserUsedChainDto struct {
-	BornAt           int    `json:"born_at"`
 	Id               string `json:"id"`
-	CommunityId      int    `json:"community_id"`
 	Name             string `json:"name"`
 	NativeTokenId    string `json:"native_token_id"`
 	LogoUrl          string `json:"logo_url"`
 	WrappedTokenId   string `json:"wrapped_token_id"`
 	IsSupportPreExec bool   `json:"is_support_pre_exec"`
+}
+
+type UserTotalBalanceDto struct {
+	TotalUsdValue decimal.Decimal `json:"total_usd_value"` // 总资产估值（USD）
 }

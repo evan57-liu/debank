@@ -15,12 +15,13 @@ import (
 )
 
 type ProtocolService struct {
-	protocolMappingRepo  *repo.ProtocolMappingRepository
-	protocolPositionRepo *repo.ProtocolPositionRepository
-	userTokenRepo        *repo.UserTokenRepository
-	walletAddressRepo    *repo.WalletAddressRepository
-	debankClient         *debank.Client
-	postgresDB           *database.PostgresDB
+	protocolMappingRepo     *repo.ProtocolMappingRepository
+	protocolPositionRepo    *repo.ProtocolPositionRepository
+	userTokenRepo           *repo.UserTokenRepository
+	walletAddressRepo       *repo.WalletAddressRepository
+	walletAssetSnapshotRepo *repo.WalletAssetSnapshotRepository
+	debankClient            *debank.Client
+	postgresDB              *database.PostgresDB
 }
 
 func NewProtocolService(
@@ -28,16 +29,18 @@ func NewProtocolService(
 	protocolPositionRepo *repo.ProtocolPositionRepository,
 	userTokenRepo *repo.UserTokenRepository,
 	walletAddressRepo *repo.WalletAddressRepository,
+	walletAssetSnapshotRepo *repo.WalletAssetSnapshotRepository,
 	debankClient *debank.Client,
 	postgresDB *database.PostgresDB,
 ) *ProtocolService {
 	return &ProtocolService{
-		protocolMappingRepo:  protocolMappingRepo,
-		protocolPositionRepo: protocolPositionRepo,
-		userTokenRepo:        userTokenRepo,
-		walletAddressRepo:    walletAddressRepo,
-		debankClient:         debankClient,
-		postgresDB:           postgresDB,
+		protocolMappingRepo:     protocolMappingRepo,
+		protocolPositionRepo:    protocolPositionRepo,
+		userTokenRepo:           userTokenRepo,
+		walletAddressRepo:       walletAddressRepo,
+		walletAssetSnapshotRepo: walletAssetSnapshotRepo,
+		debankClient:            debankClient,
+		postgresDB:              postgresDB,
 	}
 }
 
@@ -53,6 +56,10 @@ func (p *ProtocolService) ProcessProtocol(ctx context.Context) error {
 		protocolPools := mapping.ProtocolPools
 
 		for _, pool := range protocolPools {
+			if pool.Status == 1 {
+				continue
+			}
+
 			assetTokens := make([]*dto.TokenDto, 0)
 			protocol, err := p.debankClient.GetUserProtocol(ctx, pool.Address, pool.ProtocolID)
 			if err != nil {
@@ -63,9 +70,23 @@ func (p *ProtocolService) ProcessProtocol(ctx context.Context) error {
 				if item.Pool.ID != pool.PoolID {
 					continue
 				}
+				for _, token := range item.AssetTokenList {
+					token.Type = "balance"
+					if item.Detail.RewardTokenList != nil {
+						for _, rewardToken := range *item.Detail.RewardTokenList {
+							if rewardToken.ID == token.ID {
+								token.Type = "reward"
+								break
+							}
+						}
+					}
+				}
 				assetTokens = append(assetTokens, item.AssetTokenList...)
 			}
 
+			if len(assetTokens) == 0 {
+				pool.Status = 1
+			}
 			assetTokensJson, err := json.Marshal(assetTokens)
 			if err != nil {
 				logger.Error(ctx, "Marshal assetTokens failed", "error", err)
@@ -92,6 +113,22 @@ func (p *ProtocolService) ProcessProtocol(ctx context.Context) error {
 		if err != nil {
 			logger.Error(ctx, "BatchUpsert ProtocolPosition failed", "error", err)
 			return fmt.Errorf("BatchUpsert ProtocolPosition failed: %w", err)
+		}
+	}
+
+	for _, mapping := range protocolMappings {
+		jsonBytes, err := json.Marshal(mapping.ProtocolPools)
+		if err != nil {
+			logger.Error(ctx, "Marshal ProtocolPools failed", "error", err)
+			continue
+		}
+
+		if err := p.protocolMappingRepo.UpdateByCondition(map[string]interface{}{
+			"id": mapping.ID,
+		}, map[string]interface{}{
+			"protocol_pools": string(jsonBytes),
+		}); err != nil {
+			logger.Error(ctx, "failed to update system country", "err", err)
 		}
 	}
 
@@ -146,6 +183,28 @@ func (p *ProtocolService) ProcessUserTokens(ctx context.Context) error {
 			if err != nil {
 				return fmt.Errorf("BatchUpsert UserToken failed: %w", err)
 			}
+		}
+	}
+
+	walletAssets := make([]*model.WalletAssetSnapshot, 0)
+	for _, address := range addresses {
+		balance, err := p.debankClient.GetUserTotalBalance(ctx, address.Address)
+		if err != nil {
+			logger.Error(ctx, "GetUserTotalBalance failed", "error", err, "address", address)
+			continue
+		}
+
+		walletAssets = append(walletAssets, &model.WalletAssetSnapshot{
+			SyncTime:      syncTime,
+			WalletAddress: address.Address,
+			TotalUSDValue: balance.TotalUsdValue,
+		})
+	}
+
+	if len(walletAssets) > 0 {
+		err = p.walletAssetSnapshotRepo.CreateInBatches(walletAssets, 100, p.postgresDB.DB)
+		if err != nil {
+			return fmt.Errorf("BatchUpsert WalletAssetSnapshot failed: %w", err)
 		}
 	}
 
