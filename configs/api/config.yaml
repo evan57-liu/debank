@@ -16,7 +16,7 @@ postgres_db:
   conn_max_life_in_min: 20
   conn_max_idle_in_min: 10
   enable_sql_log: true
-  enable_migration: false
+  enable_migration: true
 
 third_party:
   debank:

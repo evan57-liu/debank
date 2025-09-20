@@ -8,5 +8,6 @@ import (
 
 var ProviderSet = wire.NewSet(
 	jobs.NewProtocolJob,
+	jobs.NewTransactionJob,
 	NewScheduler,
 )

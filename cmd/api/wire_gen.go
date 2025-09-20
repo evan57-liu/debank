@@ -12,6 +12,7 @@ import (
 	"github.com/coin50etf/coin-market/internal/pkg"
 	"github.com/coin50etf/coin-market/internal/pkg/database"
 	"github.com/coin50etf/coin-market/internal/pkg/third_party/debank"
+	"github.com/coin50etf/coin-market/internal/pkg/third_party/debanksign"
 	"github.com/coin50etf/coin-market/internal/repo"
 	"github.com/coin50etf/coin-market/internal/service"
 	"github.com/gin-gonic/gin"
@@ -31,15 +32,18 @@ func initApp() (*gin.Engine, func(), error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	protocolMappingRepository := repo.NewProtocolMappingRepository(postgresDB)
 	protocolPositionRepository := repo.NewProtocolPositionRepository(postgresDB)
 	userTokenRepository := repo.NewUserTokenRepository(postgresDB)
 	walletAddressRepository := repo.NewWalletAddressRepository(postgresDB)
 	walletAssetSnapshotRepository := repo.NewWalletAssetSnapshotRepository(postgresDB)
 	client := debank.NewClient()
-	protocolService := service.NewProtocolService(protocolMappingRepository, protocolPositionRepository, userTokenRepository, walletAddressRepository, walletAssetSnapshotRepository, client, postgresDB)
+	protocolService := service.NewProtocolService(protocolPositionRepository, userTokenRepository, walletAddressRepository, walletAssetSnapshotRepository, client, postgresDB)
 	protocolHandler := handler.NewProtocolHandler(protocolService)
-	engine := internal.RegisterRoutes(healthHandler, protocolHandler)
+	transactionRepository := repo.NewTransactionRepository(postgresDB)
+	debanksignClient := debanksign.NewClient()
+	transactionService := service.NewTransactionService(protocolPositionRepository, walletAddressRepository, transactionRepository, client, debanksignClient, postgresDB)
+	transactionHandler := handler.NewTransactionHandler(transactionService)
+	engine := internal.RegisterRoutes(healthHandler, protocolHandler, transactionHandler)
 	return engine, func() {
 	}, nil
 }

@@ -12,6 +12,7 @@ import (
 func RegisterRoutes(
 	healthHandler *handler.HealthHandler,
 	protocolHandler *handler.ProtocolHandler,
+	transactionHandler *handler.TransactionHandler,
 ) *gin.Engine {
 	r := gin.Default()
 	r.Use(gzip.Gzip(gzip.BestSpeed))
@@ -26,6 +27,11 @@ func RegisterRoutes(
 	{
 		symbolGroup.POST("process-protocol", protocolHandler.ProcessProtocol)
 		symbolGroup.POST("process-user-tokens", protocolHandler.ProcessUserTokens)
+	}
+
+	transactionGroup := v1Group.Group("/transactions")
+	{
+		transactionGroup.POST("process-transaction", transactionHandler.ProcessTransaction)
 	}
 
 	return r

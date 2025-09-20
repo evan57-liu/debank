@@ -6,4 +6,5 @@ const (
 	TableNameUserToken           = "t_user_token"
 	TableNameWalletAddress       = "t_wallet_address"
 	TableNameWalletAssetSnapshot = "t_wallet_asset_snapshot"
+	TableNameTransaction         = "t_transaction"
 )

@@ -11,6 +11,7 @@ import (
 	"github.com/coin50etf/coin-market/internal/pkg"
 	"github.com/coin50etf/coin-market/internal/pkg/database"
 	"github.com/coin50etf/coin-market/internal/pkg/third_party/debank"
+	"github.com/coin50etf/coin-market/internal/pkg/third_party/debanksign"
 	"github.com/coin50etf/coin-market/internal/repo"
 	"github.com/coin50etf/coin-market/internal/scheduler"
 	"github.com/coin50etf/coin-market/internal/scheduler/jobs"
@@ -31,15 +32,18 @@ func initScheduler() (*scheduler.Scheduler, func(), error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	protocolMappingRepository := repo.NewProtocolMappingRepository(postgresDB)
 	protocolPositionRepository := repo.NewProtocolPositionRepository(postgresDB)
 	userTokenRepository := repo.NewUserTokenRepository(postgresDB)
 	walletAddressRepository := repo.NewWalletAddressRepository(postgresDB)
 	walletAssetSnapshotRepository := repo.NewWalletAssetSnapshotRepository(postgresDB)
 	client := debank.NewClient()
-	protocolService := service.NewProtocolService(protocolMappingRepository, protocolPositionRepository, userTokenRepository, walletAddressRepository, walletAssetSnapshotRepository, client, postgresDB)
+	protocolService := service.NewProtocolService(protocolPositionRepository, userTokenRepository, walletAddressRepository, walletAssetSnapshotRepository, client, postgresDB)
 	protocolJob := jobs.NewProtocolJob(protocolService)
-	schedulerScheduler := scheduler.NewScheduler(protocolJob)
+	transactionRepository := repo.NewTransactionRepository(postgresDB)
+	debanksignClient := debanksign.NewClient()
+	transactionService := service.NewTransactionService(protocolPositionRepository, walletAddressRepository, transactionRepository, client, debanksignClient, postgresDB)
+	transactionJob := jobs.NewTransactionJob(transactionService)
+	schedulerScheduler := scheduler.NewScheduler(protocolJob, transactionJob)
 	return schedulerScheduler, func() {
 	}, nil
 }

@@ -9,27 +9,32 @@ import (
 )
 
 type Scheduler struct {
-	cron        *cron.Cron
-	protocolJob *jobs.ProtocolJob
+	cron           *cron.Cron
+	protocolJob    *jobs.ProtocolJob
+	transactionJob *jobs.TransactionJob
 }
 
 func NewScheduler(
 	protocolJob *jobs.ProtocolJob,
+	transactionJob *jobs.TransactionJob,
 ) *Scheduler {
 	return &Scheduler{
-		cron:        cron.New(cron.WithSeconds()),
-		protocolJob: protocolJob,
+		cron:           cron.New(cron.WithSeconds()),
+		protocolJob:    protocolJob,
+		transactionJob: transactionJob,
 	}
 }
 
 // RegisterJobs 注册定时任务
 func (s *Scheduler) RegisterJobs() {
 	log.Println("Registering scheduled jobs...")
-	// 每周一的凌晨12点执行协议数据处理任务
-	/*if _, err := s.cron.AddJob("0 0 0 * * 1", s.protocolJob); err != nil {
+	// 每天的凌晨1点30分执行协议数据处理任务
+	if _, err := s.cron.AddJob("0 30 1 * * ?", s.protocolJob); err != nil {
 		log.Fatal("Failed to schedule symbol job:", err)
-	}*/
-	if _, err := s.cron.AddJob("0 30 0 * * ?", s.protocolJob); err != nil {
+	}
+
+	// 每周一的凌晨12点执行协议数据处理任务
+	if _, err := s.cron.AddJob("0 0 0 * * 1", s.transactionJob); err != nil {
 		log.Fatal("Failed to schedule symbol job:", err)
 	}
 

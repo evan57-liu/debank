@@ -3,9 +3,9 @@ package repo
 import "github.com/google/wire"
 
 var ProviderSet = wire.NewSet(
-	NewProtocolMappingRepository,
 	NewProtocolPositionRepository,
 	NewUserTokenRepository,
 	NewWalletAddressRepository,
 	NewWalletAssetSnapshotRepository,
+	NewTransactionRepository,
 )

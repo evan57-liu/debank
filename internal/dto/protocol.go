@@ -13,6 +13,19 @@ type ProtocolDto struct {
 	PortfolioItemList     []*PortfolioItemDto `json:"portfolio_item_list"`
 }
 
+type SimpleProtocolDto struct {
+	Id                    string  `json:"id"`
+	Chain                 string  `json:"chain"`
+	Name                  string  `json:"name"`
+	SiteUrl               string  `json:"site_url"`
+	LogoUrl               string  `json:"logo_url"`
+	HasSupportedPortfolio bool    `json:"has_supported_portfolio"`
+	Tvl                   float64 `json:"tvl"`
+	NetUsdValue           float64 `json:"net_usd_value"`
+	AssetUsdValue         float64 `json:"asset_usd_value"`
+	DebtUsdValue          int     `json:"debt_usd_value"`
+}
+
 type PortfolioItemDto struct {
 	Stats          StatsDto               `json:"stats"`
 	AssetDict      map[string]float64     `json:"asset_dict"`
@@ -103,4 +116,62 @@ type UserUsedChainDto struct {
 
 type UserTotalBalanceDto struct {
 	TotalUsdValue decimal.Decimal `json:"total_usd_value"` // 总资产估值（USD）
+}
+
+type DebankResponse struct {
+	Data      DebankDataDto `json:"data"`
+	ErrorCode int           `json:"error_code"`
+}
+
+type DebankDataDto struct {
+	ID     string           `json:"id"`
+	Result *DebankResultDto `json:"result,omitempty"`
+}
+
+type DebankResultDto struct {
+	Data TransactionDataDto
+}
+
+type TransactionDataDto struct {
+	HistoryList []History `json:"history_list"`
+}
+
+type History struct {
+	CateID       *string       `json:"cate_id"`
+	CexID        *string       `json:"cex_id"`
+	Chain        string        `json:"chain"`
+	ID           string        `json:"id"`
+	Idx          int           `json:"idx"`
+	IsScam       bool          `json:"is_scam"`
+	OtherAddr    string        `json:"other_addr"`
+	ProjectID    *string       `json:"project_id"`
+	Receives     []ReceiveItem `json:"receives"`
+	Sends        []SendItem    `json:"sends"`
+	TimeAt       float64       `json:"time_at"`
+	TokenApprove interface{}   `json:"token_approve"`
+	Tx           Transaction   `json:"tx"`
+}
+
+type SendItem struct {
+	Amount  float64 `json:"amount"`
+	Price   float64 `json:"price"`
+	ToAddr  string  `json:"to_addr"`
+	TokenID string  `json:"token_id"`
+}
+
+type ReceiveItem struct {
+	Amount   float64 `json:"amount"`
+	Price    float64 `json:"price"`
+	FromAddr string  `json:"from_addr"`
+	TokenID  string  `json:"token_id"`
+}
+
+type Transaction struct {
+	FromAddr string  `json:"from_addr"`
+	ID       string  `json:"id"`
+	Idx      int     `json:"idx"`
+	Name     string  `json:"name"`
+	Status   int     `json:"status"`
+	ToAddr   string  `json:"to_addr"`
+	Value    float64 `json:"value"`
 }

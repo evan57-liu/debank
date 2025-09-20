@@ -15,7 +15,6 @@ import (
 )
 
 type ProtocolService struct {
-	protocolMappingRepo     *repo.ProtocolMappingRepository
 	protocolPositionRepo    *repo.ProtocolPositionRepository
 	userTokenRepo           *repo.UserTokenRepository
 	walletAddressRepo       *repo.WalletAddressRepository
@@ -25,7 +24,6 @@ type ProtocolService struct {
 }
 
 func NewProtocolService(
-	protocolMappingRepo *repo.ProtocolMappingRepository,
 	protocolPositionRepo *repo.ProtocolPositionRepository,
 	userTokenRepo *repo.UserTokenRepository,
 	walletAddressRepo *repo.WalletAddressRepository,
@@ -34,7 +32,6 @@ func NewProtocolService(
 	postgresDB *database.PostgresDB,
 ) *ProtocolService {
 	return &ProtocolService{
-		protocolMappingRepo:     protocolMappingRepo,
 		protocolPositionRepo:    protocolPositionRepo,
 		userTokenRepo:           userTokenRepo,
 		walletAddressRepo:       walletAddressRepo,
@@ -45,90 +42,100 @@ func NewProtocolService(
 }
 
 func (p *ProtocolService) ProcessProtocol(ctx context.Context) error {
-	protocolMappings, err := p.protocolMappingRepo.FindAll()
+	addresses, err := p.walletAddressRepo.FindAll()
 	if err != nil {
-		return fmt.Errorf("FindAll ProtocolMapping failed: %w", err)
+		return fmt.Errorf("FindAll WalletAddress failed: %w", err)
 	}
-
 	syncTime := time.Now()
+
 	protocolPositions := make([]*model.ProtocolPosition, 0)
-	for _, mapping := range protocolMappings {
-		protocolPools := mapping.ProtocolPools
+	for _, address := range addresses {
+		protocols, err := p.debankClient.GetUserAllSimpleProtocolList(ctx, address.Address)
+		if err != nil {
+			logger.Error(ctx, "GetUserAllSimpleProtocolList failed", "error", err, "address", address)
+			continue
+		}
 
-		for _, pool := range protocolPools {
-			if pool.Status == 1 {
-				continue
-			}
-
-			assetTokens := make([]*dto.TokenDto, 0)
-			protocol, err := p.debankClient.GetUserProtocol(ctx, pool.Address, pool.ProtocolID)
+		for _, simpleProtocol := range protocols {
+			protocol, err := p.debankClient.GetUserProtocol(ctx, address.Address, simpleProtocol.ID)
 			if err != nil {
-				logger.Error(ctx, "GetProtocolPositionList failed", "error", err)
+				logger.Error(ctx, "GetUserProtocol failed", "error", err, "address", address, "protocolID", protocol.ID)
 				continue
 			}
-			for _, item := range protocol.PortfolioItemList {
-				if item.Pool.ID != pool.PoolID {
-					continue
+
+			poolMap := make(map[string][]*dto.PortfolioItemDto)
+			for _, portfolioItem := range protocol.PortfolioItemList {
+				if _, exists := poolMap[portfolioItem.Pool.ID]; !exists {
+					poolMap[portfolioItem.Pool.ID] = make([]*dto.PortfolioItemDto, 0)
 				}
-				for _, token := range item.AssetTokenList {
-					token.Type = "balance"
-					if item.Detail.RewardTokenList != nil {
-						for _, rewardToken := range *item.Detail.RewardTokenList {
-							if rewardToken.ID == token.ID {
-								token.Type = "reward"
-								break
+				poolMap[portfolioItem.Pool.ID] = append(poolMap[portfolioItem.Pool.ID], portfolioItem)
+			}
+
+			poolName := ""
+			description := ""
+			for poolID, portfolioItems := range poolMap {
+				assetTokens := make([]*dto.TokenDto, 0)
+				for i, portfolioItem := range portfolioItems {
+					/*if strings.ToLower(portfolioItem.Name) == "vesting" ||
+						strings.ToLower(portfolioItem.Name) == "locked" {
+						continue
+					}*/
+
+					for _, token := range portfolioItem.AssetTokenList {
+						token.Type = "balance"
+						if portfolioItem.Detail.RewardTokenList != nil {
+							for _, rewardToken := range *portfolioItem.Detail.RewardTokenList {
+								if rewardToken.ID == token.ID {
+									token.Type = "reward"
+									break
+								}
 							}
 						}
+
+						if i == 0 && token.Type == "balance" {
+							description += token.Symbol + "+"
+						}
 					}
+
+					if i == 0 {
+						poolName = portfolioItem.Name
+						if len(description) > 0 {
+							description = description[:len(description)-1]
+						}
+						if len(portfolioItem.Detail.Description) > 0 {
+							description = portfolioItem.Detail.Description
+						}
+					}
+
+					assetTokens = append(assetTokens, portfolioItem.AssetTokenList...)
 				}
-				assetTokens = append(assetTokens, item.AssetTokenList...)
-			}
 
-			if len(assetTokens) == 0 {
-				pool.Status = 1
-			}
-			assetTokensJson, err := json.Marshal(assetTokens)
-			if err != nil {
-				logger.Error(ctx, "Marshal assetTokens failed", "error", err)
-				continue
-			}
+				assetTokensJson, err := json.Marshal(assetTokens)
+				if err != nil {
+					logger.Error(ctx, "Marshal assetTokens failed", "error", err)
+					continue
+				}
 
-			protocolPosition := &model.ProtocolPosition{
-				InternalProtocolName: mapping.InternalProtocolName,
-				InternalProtocolID:   mapping.InternalProtocolID,
-				Address:              pool.Address,
-				ChainID:              pool.ChainID,
-				ProtocolID:           pool.ProtocolID,
-				PoolID:               pool.PoolID,
-				CustomID:             fmt.Sprintf("%s.%s.%s.%s", pool.Address, pool.ChainID, pool.ProtocolID, pool.PoolID),
-				AssetTokens:          string(assetTokensJson),
-				SyncTime:             syncTime,
+				protocolPosition := &model.ProtocolPosition{
+					Address:         address.Address,
+					ChainID:         protocol.Chain,
+					ProtocolID:      protocol.ID,
+					ProtocolName:    protocol.Name,
+					PoolID:          poolID,
+					PoolName:        poolName,
+					PoolDescription: description,
+					AssetTokens:     string(assetTokensJson),
+					SyncTime:        syncTime,
+				}
+				protocolPositions = append(protocolPositions, protocolPosition)
 			}
-			protocolPositions = append(protocolPositions, protocolPosition)
 		}
 	}
 
 	if len(protocolPositions) > 0 {
-		err = p.protocolPositionRepo.CreateInBatches(protocolPositions, 100, p.postgresDB.DB)
-		if err != nil {
+		if err = p.protocolPositionRepo.CreateInBatches(protocolPositions, 100, p.postgresDB.DB); err != nil {
 			logger.Error(ctx, "BatchUpsert ProtocolPosition failed", "error", err)
 			return fmt.Errorf("BatchUpsert ProtocolPosition failed: %w", err)
-		}
-	}
-
-	for _, mapping := range protocolMappings {
-		jsonBytes, err := json.Marshal(mapping.ProtocolPools)
-		if err != nil {
-			logger.Error(ctx, "Marshal ProtocolPools failed", "error", err)
-			continue
-		}
-
-		if err := p.protocolMappingRepo.UpdateByCondition(map[string]interface{}{
-			"id": mapping.ID,
-		}, map[string]interface{}{
-			"protocol_pools": string(jsonBytes),
-		}); err != nil {
-			logger.Error(ctx, "failed to update system country", "err", err)
 		}
 	}
 
